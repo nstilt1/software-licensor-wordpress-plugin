@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package create_license_request;
+
+message CreateLicenseRequest {
+    string customer_first_name = 10;
+    string customer_last_name = 20;
+    // this email address can be displayed in the product's GUI
+    string customer_email = 30;
+    string order_id = 40;
+    string user_id = 50;
+    // this success message will override the plugin's success message in the 
+    // database
+    string custom_success_message = 60;
+
+    // map of Product IDs to ProductInfo
+    map<string, ProductInfo> product_info = 70;
+}
+
+// license-type-specific product information
+message ProductInfo {
+    oneof license_type {
+        SubscriptionLicense subscription = 1;
+        PerpetualLicense perpetual_license = 2;
+        TrialLicense trial_license = 3;
+    }
+}
+
+message PerpetualLicense {
+    uint32 quantity = 2;
+}
+
+message SubscriptionLicense {
+    // for flexibility, there are two ways that subscription end times can get 
+    // updated
+    oneof subscription_period {
+        // Setting this value will result in Software Licensor adding this many 
+        // seconds to either their current end date, or adding it to `now` if the
+        // end date has already passed
+        uint64 seconds_to_add = 3;
+        // Setting this value will result in Software Licensor setting the end 
+        // time to the value provided. This time must be seconds since UNIX epoch
+        uint64 end_time = 4;
+    }
+}
+
+message TrialLicense {
+}
+
+message CreateLicenseResponse {
+    // This license_info is a protobuf binary-encoded GetLicenseResponse
+    bytes license_info = 1;
+    map<string, string> issues = 4;
+}

@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package get_license_request;
+
+message GetLicenseRequest {
+    string user_id = 1;
+}
+
+message GetLicenseResponse {
+    // a map of product_ids to license info
+    map<string, LicenseInfo> licensed_products = 1;
+    string license_code = 2;
+    string offline_code = 3;
+}
+
+message LicenseInfo {
+    string license_type = 1;
+    string expiration_or_renewal = 3;
+    repeated Machine offline_machines = 5;
+    repeated Machine online_machines = 10;
+    uint32 machine_limit = 15;
+}
+
+message Machine {
+    string id = 1;
+    string os = 2;
+    string computer_name = 3;
+}
