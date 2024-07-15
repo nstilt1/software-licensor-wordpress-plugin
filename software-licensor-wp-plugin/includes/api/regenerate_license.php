@@ -25,9 +25,8 @@ function software_licensor_regenerate_license_request() {
     }
 
     $last_regen_key = 'software_licensor_last_regen';
-    $last_regen = get_user_meta($user->ID, $last_regen_key, 0);
+    $last_regen = (int) get_user_meta($user->ID, $last_regen_key, true);
     if (time() - $last_regen < 60 * 60 * 24 * 14) {
-        echo 'Error: License regen can only be performed once per fortnight.';
         wp_die('Error: License regen can only be performed once per fortnight.');
     }
 
@@ -39,7 +38,7 @@ function software_licensor_regenerate_license_request() {
     $ok = software_licensor_process_request(software_licensor_load_store_id(), 'https://01lzc0nx9e.execute-api.us-east-1.amazonaws.com/v2/regenerate_license_code', $request_proto, $response_proto);
 
     if (!$ok) {
-        echo 'Error regenerating the license code';
+        update_user_meta($user->ID, $last_regen_key, time());
         return false;
     }
 

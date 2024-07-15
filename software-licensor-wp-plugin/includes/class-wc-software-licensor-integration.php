@@ -34,8 +34,8 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
             add_action( 'woocommerce_update_options_integration_' .  $this->id, array( $this, 'process_admin_options' ) );
 
             add_action('woocommerce_check_cart_items', array($this, 'software_licensor_validate_cart'));
-            add_action('woocommerce_thankyou', 'software_licensor_create_license_request');
-            add_action('woocommerce_email_order_details', array($this, 'software_licensor_insert_license_code'));
+            add_action('woocommerce_payment_complete', 'software_licensor_create_license_request');
+            add_action('woocommerce_email_order_details', array($this, 'software_licensor_insert_license_code'), 10, 4);
 
             // authorized regenerate license action
             add_action('wp_ajax_software_licensor_regenerate_license', 'software_licensor_regenerate_license_request');
@@ -47,41 +47,37 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
             add_action('woocommerce_update_options_integration_' . $this->id, array($this, 'process_admin_options'));
 
             add_action('admin_menu', array($this, 'software_licensor_admin_menus'));
-        }
-
-        function software_licensor_human_timing($time) {
-            $time = time() - $time;
-            $time = ($time <1) ? 1 : $time;
-            $minutes = intdiv($time, 60);
-            $seconds = $time % 60;
-            $result = "";
-            if ( $minutes >= 1 ) {
-                $result .= ($minutes+1) . " minutes";
-            }else if ( $seconds > 0 ) {
-                $result .= "about 1 minute";
             }
-        }
 
         function software_licensor_display_license() {
+            software_licensor_error_log('Inside software_licensor_display_license');
             if (!wp_get_current_user()) {
                 wp_die('You must be logged in to view your licenses.');
             }
             $license_data = software_licensor_get_license_info(wp_get_current_user());
+            if ($license_data === false) {
+                ob_start();
+                echo '<p>No license data to display.</p>';
+                return ob_get_clean();
+            }
             $data = [];
             $license_code = $license_data->getLicenseCode();
+            software_licensor_error_log('license code: ' . $license_code);
             //$licensed_products = new Get_license_request\LicenseInfo();
             $licensed_products = $license_data->getLicensedProducts();
+            $iterator = $licensed_products->getIterator();
 
+            software_licensor_error_log('licensed_products obj: ' . print_r($licensed_products, true));
             $store_products = software_licensor_get_products_array();
 
             $counter = 1;
-            foreach ($licensed_products as $product_id => $data) {
+            foreach ($iterator as $product_id => $product_data) {
                 $machines = [];
-                $license_type = $data->getLicenseType();
-                $expiration = $data->getExpirationOrRenewal();
-                $offline_machines = $data->getOfflineMachines();
-                $online_machines = $data->getOnlineMachines();
-                $machine_limit = $data->getMachineLimit();
+                $license_type = $product_data->getLicenseType();
+                $expiration = $product_data->getExpirationOrRenewal();
+                $offline_machines = $product_data->getOfflineMachines();
+                $online_machines = $product_data->getOnlineMachines();
+                $machine_limit = $product_data->getMachineLimit();
                 $machine_count = count($offline_machines) + count($online_machines);
                 
                 foreach ($offline_machines as $index => $m) {
@@ -114,10 +110,11 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 ]);
                 $counter += 1;        
             }
-            
+            software_licensor_error_log('data: ' . json_encode($data));
 
-            $output_html = '<h1 class="SL-licenses-header">Licenses</h1><div class="licenses">';
-
+            $output_html = '<div class="licenses">';
+            $output_html .= '<div class="SL-license-code-header">License Code:</div>';
+            $output_html .= '<div class="SL-license-code-container"><span class="SL-license-code">' . htmlspecialchars($license_code) . '</span></div>';
             $output_html .= '<table class="SL-licenses-table">';
             $output_html .= '<thead><tr>';
 
@@ -132,7 +129,7 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
 
             foreach ($data as $index => $item) {
                 $output_html .= '<tr class="SL-product-row" data-index="' . htmlspecialchars($item['index']) . '">';
-                $output_html .= '<td>' . htmlspecialchars($item['product_name']) . '</td>';
+                $output_html .= '<td>' . stripslashes(htmlspecialchars($item['product_name'])) . '</td>';
                 $output_html .= '<td>' . htmlspecialchars($item['license_type']) . '</td>';
                 $output_html .= '<td>' . htmlspecialchars($item['expiration']) . '</td>';
                 $output_html .= '<td>' . htmlspecialchars($item['machine_count']) . '/' . htmlspecialchars($item['machine_limit']) . '</td>';
@@ -164,7 +161,7 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
 
             $output_html .= '<button onclick="regenerateLicense()">Regenerate License</button>';
 
-            $output_html .= '<script>;
+            $output_html .= '<script>
                 function regenerateLicense() {
                     fetch("' . admin_url('admin-ajax.php') . '?action=software_licensor_regenerate_license")
                     .then(response => response.text())
@@ -185,7 +182,7 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                         });
                     });
                 });
-            </script>';
+            </script></div>';
 
             ob_start();
 
@@ -207,7 +204,7 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
             $has_plugin = false;
             $names = array();
             foreach( $items as $item ) {
-                if ( $item->get_attribute( 'software_licensor_id' ) ) {
+                if ( $item->get_meta( 'software_licensor_id', true ) ) {
                     $has_plugin = true;
                     array_push($names, $item->get_name());
                 }
@@ -220,6 +217,7 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 if (mb_substr($message, -1) != ':') {
                     $message .= ':';
                 }
+                ob_start();
                 if ($this->get_option('include_software_names')) {
                     $name_list = $names . join(', ');
 
@@ -228,6 +226,9 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 }else{
                     echo __("<strong>$message</strong><br><ul><li>$license_code</li></ul>", 'software-licensor');
                 }
+
+                $output = ob_get_clean();
+                echo $output;
             }
         }
 

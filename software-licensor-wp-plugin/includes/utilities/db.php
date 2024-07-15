@@ -35,9 +35,13 @@ function software_licensor_encrypt_db($id, $data) {
 /**
  * Decrypts data in the database.
  * 
- * @return false|string Returns false if there is an issue decrypting the data.
+ * @return false|string Returns false if there is an issue decrypting the data,
+ * or if there was no data to decrypt.
  */
 function software_licensor_decrypt_db($id, $data) {
+    if (!isset($data) || $data === false || strlen($data) < 12) {
+        return false;
+    }
     if ( defined( 'LOGGED_IN_KEY' ) && '' !== LOGGED_IN_KEY ) {
         $key = LOGGED_IN_KEY;
     } else {
@@ -111,6 +115,12 @@ function software_licensor_get_products_array() {
 function software_licensor_save_license_info($user, $proto) {
     $binary = software_licensor_encode_protobuf_length_delimited($proto);
     $encrypted = software_licensor_encrypt_db($user->ID, $binary);
+    if ($encrypted === false) {
+        software_licensor_error_log('Error saving the license');
+    } else {
+        software_licensor_error_log('License saved: ' . print_r($proto, true));
+        software_licensor_error_log('License json: ' . $proto->serializeToJsonString());
+    }
     update_user_meta($user->ID, 'software_licensor_license_info', $encrypted);
     update_user_meta($user->ID, 'software_licensor_license_timeout', time());
 }
@@ -121,23 +131,26 @@ function software_licensor_save_license_info($user, $proto) {
  * the last request.
  */
 function software_licensor_get_license_info($user) {
+    software_licensor_error_log('inside software_licensor_get_license_info');
     $proto = new Get_license_request\GetLicenseResponse();
     $encrypted = get_user_meta($user->ID, 'software_licensor_license_info', true);
     $decrypted = software_licensor_decrypt_db($user->ID, $encrypted);
 
-    if ($decrypted === false || strlen($decrypted) > 0) {
-        $last_check = get_user_meta($user->ID, 'software_licensor_license_timeout', true);
-        
-        // check for updated license info if 4 hours have passed
-        if ( time() - $last_check > 60 * 60 * 4 ) {
-            $new_license_info = software_licensor_get_license_request($user->ID);
+    $last_check = (int) get_user_meta($user->ID, 'software_licensor_license_timeout', true);
+    // check for updated license info if 4 hours have passed
+    if ( time() - $last_check > 60 * 60 * 4 ) {
+        $new_license_info = software_licensor_get_license_request($user->ID);
+        if ($new_license_info != false) {
             software_licensor_save_license_info($user, $new_license_info);
+            software_licensor_error_log('received and saved updated license info');
             return $new_license_info;
-        } 
-        software_licensor_decode_protobuf_length_delimited($proto, $decrypted);
-        return $proto;
+        }
+        software_licensor_error_log('no license was found for the user');
+        return false;
     }
-    return false;
+    software_licensor_decode_protobuf_length_delimited($proto, $decrypted);
+    software_licensor_error_log('it has not yet been 4 hours since the last GetLicense request');
+    return $proto;
 }
 
 /**

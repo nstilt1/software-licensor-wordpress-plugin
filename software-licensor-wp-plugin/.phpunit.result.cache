@@ -1,0 +1,1 @@
+{"version":1,"defects":{"CryptographyTests::testPrintVersionInfo":5,"CryptographyTests::testEstablishPrivateKey":5,"CryptographyTests::testKeyDerivation":5},"times":{"CryptographyTests::testPrintVersionInfo":0.001,"CryptographyTests::testEstablishPrivateKey":0.001,"CryptographyTests::testKeyDerivation":0.001}}

@@ -76,7 +76,6 @@ function software_licensor_process_request($store_id, $url, $request_contents, &
             software_licensor_update_pubkeys(false);
         }
     }
-    $software_licensor_ecdsa_pubkey = get_option('software-licensor-ecdsa-pubkey');
 
     $config = [
         "private_key_type" => OPENSSL_KEYTYPE_EC,

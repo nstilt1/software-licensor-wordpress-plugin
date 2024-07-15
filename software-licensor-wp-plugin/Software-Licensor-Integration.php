@@ -68,6 +68,7 @@ require_once 'includes/protobufs/generated/Register_store_request/RegisterStoreR
 
 require_once 'includes/utilities/db.php';
 require_once 'includes/utilities/protobuf.php';
+require_once 'includes/utilities/debug.php';
 
 require_once 'includes/api/create_license.php';
 require_once 'includes/api/create_product.php';
