@@ -95,7 +95,7 @@ function software_licensor_create_license_request($order_id) {
     if ($has_plugins) {
         software_licensor_error_log('Product info json array: ' . json_encode($product_info_map));
         $request_proto->setProductInfo($product_info_map);
-        software_licensor_error_log('request_proto->getProductInfo(): ' . print_r($request_proto->getProductInfo()));
+        //software_licensor_error_log('request_proto->getProductInfo(): ' . print_r($request_proto->getProductInfo()));
 
         if (software_licensor_is_sharing_customer_info()) {
             $request_proto->setCustomerEmail($order->get_billing_email());
@@ -134,7 +134,7 @@ function software_licensor_create_license_request($order_id) {
             echo 'There were one or more problems processing your license acquisition.';
             $products = software_licensor_get_products_array();
             foreach ($issues_arr as $id => $error) {
-                echo $products[$id]['product_name'] . ': ' . $error;
+                echo stripslashes($products[$id]['product_name']) . ': ' . $error;
                 software_licensor_error_log('Error with ' . $products[$id]['product_name'] . ': ' . $error);
             }
         }
@@ -149,16 +149,16 @@ function software_licensor_create_license_request($order_id) {
         $license_code = $license_proto->getLicenseCode();
         software_licensor_error_log('license code: ' . $license_code);
 
-        software_licensor_error_log('License Info: ' . print_r($license_proto->getLicensedProducts(), true));
+        //software_licensor_error_log('License Info: ' . print_r($license_proto->getLicensedProducts(), true));
         if (!$has_physical_items) {
             if ($order->get_status() == 'processing') {
                 $order->update_status('wc-completed');
             }
         }
         
-        $email = $order->get_billing_email();
-        echo 'Your license code is: ' . $license_code;
-        echo "<h3>Your license code will also be delivered to $email</h3>";
+        //$email = $order->get_billing_email();
+        //echo 'Your license code is: ' . $license_code;
+        //echo "<h3>Your license code will also be delivered to $email</h3>";
     } else {
         error_log('software_licensor_id attribute was not found');
     }

@@ -15,8 +15,9 @@ Ensure that your website is running PHP 8 or later. This plugin is confirmed to 
 9. Navigate to the Edit Product Page, under attributes, we need to add an attribute called `software_licensor_id` set to the `Product's ID`. Then we'll need an attribute called `license_type` that is set to the license type, such as `perpetual` or `trial`.
 10. Add a new `page`, then insert the following `shortcode`: `[software_licensor_licenses_page]`. This page will now show the user's license information. They can click on a row and it will reveal the active machines. This list can update every 4 hours, or when `regenerate_license` is called, or whenever a new license is purchased. This page can also be styled. Simply hit `inspect element`, then use the class names to style the page. You can also enable some pagination by using the `data-index` field on the `tr`s.
 
-## Example styles for the `[software_licensor_licenses_page]`
-```css
+## Example styles and scripts for the `[software_licensor_licenses_page]`
+```html
+<style>
 .licenses {
   width: 100%;
 }
@@ -27,25 +28,47 @@ Ensure that your website is running PHP 8 or later. This plugin is confirmed to 
 
 .SL-license-code {
   font-size: 16px;
-  padding-bottom: 1em;
   background-color: #f3f3f3f3;
+  cursor: pointer;
 }
 
 .SL-licenses-table {
   width: 100%;
+  padding-top: 1em;
   text-align: left;
-}
-
-.SL-licenses-table {
   border: 1px solid;
   border-collapse: collapse;
 }
-/* styles for the expandable tables under each row of the licenses table */
+
+.SL-licenses-table>tbody>tr {
+  cursor: pointer;
+}
+
 .machine-table {
   border: 1px solid;
   border-collapse: collapse;
   width: 100%;
 }
+</style>
+<script>
+  document.getElementsByClassName('SL-license-code')[0].addEventListener('click', function() {
+    navigator.clipboard.writeText(this.innerText)
+        .then(() => {
+            // Show notification on success; change the id based on your html
+            let notification = document.getElementById('div_block-6-2016');
+            notification.style.opacity = "1.0"; // Make the notification visible
+
+            // Hide the notification after 5 seconds
+            setTimeout(() => {
+                notification.style.opacity = "0.0";
+            }, 5000);
+        })
+        .catch(err => {
+            // Handle possible errors
+            console.error('Error copying text: ', err);
+        });
+});
+</script>
 ```
 ## Status
 

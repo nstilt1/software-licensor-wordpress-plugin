@@ -176,7 +176,6 @@ function software_licensor_process_request($store_id, $url, $request_contents, &
 
     if ($status_code != 200) {
         error_log('Error: ' . $body);
-        echo 'Error: ' . $body;
         return false;
     }
 

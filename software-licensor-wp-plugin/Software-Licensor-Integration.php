@@ -6,6 +6,7 @@
  * Author: Noah Stiltner
  * Author URI: https://www.hyperformancesolutions.com
  * Version: 1.0
+ * Requires PHP: 8.0
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

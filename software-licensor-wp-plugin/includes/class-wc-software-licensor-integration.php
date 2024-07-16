@@ -35,7 +35,10 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
 
             add_action('woocommerce_check_cart_items', array($this, 'software_licensor_validate_cart'));
             add_action('woocommerce_payment_complete', 'software_licensor_create_license_request');
-            add_action('woocommerce_email_order_details', array($this, 'software_licensor_insert_license_code'), 10, 4);
+            
+            // this was supposed to include the license code in an email to the user,
+            // but it does not work
+            //add_action('woocommerce_email_order_details', array($this, 'software_licensor_insert_license_code'), 10, 4);
 
             // authorized regenerate license action
             add_action('wp_ajax_software_licensor_regenerate_license', 'software_licensor_regenerate_license_request');
@@ -67,7 +70,7 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
             $licensed_products = $license_data->getLicensedProducts();
             $iterator = $licensed_products->getIterator();
 
-            software_licensor_error_log('licensed_products obj: ' . print_r($licensed_products, true));
+            //software_licensor_error_log('licensed_products obj: ' . print_r($licensed_products, true));
             $store_products = software_licensor_get_products_array();
 
             $counter = 1;
@@ -192,6 +195,10 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
         }
 
         /**
+         * Note: This code does not work at the moment. If you want it to work, 
+         * you'll need to uncomment the `add_action('woocommerce_email_order_details', ...)
+         * near the top of this file, or possibly change the hook/tag name.
+         * 
          * Insert the license information into the email that is sent to the customer.
          * @param mixed $order the order object
          * @param mixed $admin
@@ -199,6 +206,7 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
          * @param mixed $email
          * @return void
          */
+        /*
         function software_licensor_insert_license_code($order, $admin, $plain, $email) {
             $items = $order->get_items();
             $has_plugin = false;
@@ -231,6 +239,7 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 echo $output;
             }
         }
+        */
 
         /**
          * Ensure that there aren't duplicate items in the cart that could mess up the licensing

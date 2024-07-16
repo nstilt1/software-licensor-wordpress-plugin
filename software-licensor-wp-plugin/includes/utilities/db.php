@@ -118,7 +118,7 @@ function software_licensor_save_license_info($user, $proto) {
     if ($encrypted === false) {
         software_licensor_error_log('Error saving the license');
     } else {
-        software_licensor_error_log('License saved: ' . print_r($proto, true));
+        //software_licensor_error_log('License saved: ' . print_r($proto, true));
         software_licensor_error_log('License json: ' . $proto->serializeToJsonString());
     }
     update_user_meta($user->ID, 'software_licensor_license_info', $encrypted);
