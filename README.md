@@ -98,6 +98,10 @@ The only things that have not been successfully tested so far are:
 
   * A better solution would be to add a second button to the `software_licensor_licenses_page` called `Activate Offline License`, that when clicked, would open up a form that allows the user to upload a file, then the Store's backend would send a `license_activation` request on the user's behalf, and the `license_activation_refactor` code would need to be updated to require a valid signature for offline requests, rather than the user only "knowing" the 4-digit offline code.
 
+* Deactivating individual machines on a license
+  
+  * There is an API method that can remove machines from a license, but it has not been implemented in this WordPress Plugin due to the simplicity of the license regeneration API. The license regeneration method will remove all `online machines` from a license, and return a new license code. It will not remove `offline machines`.
+
 
 ## Development
 
