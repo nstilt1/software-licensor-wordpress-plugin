@@ -78,6 +78,9 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 $machines = [];
                 $license_type = $product_data->getLicenseType();
                 $expiration = $product_data->getExpirationOrRenewal();
+                if (is_numeric($expiration) && $expiration > 0) {
+                    $expiration = date("d M Y", $expiration);
+                }
                 $offline_machines = $product_data->getOfflineMachines();
                 $online_machines = $product_data->getOnlineMachines();
                 $machine_limit = $product_data->getMachineLimit();
