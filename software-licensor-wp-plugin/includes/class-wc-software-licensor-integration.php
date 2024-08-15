@@ -165,7 +165,9 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
 
             $output_html .= '</table>';
 
-            $output_html .= '<button onclick="regenerateLicense()">Regenerate License</button>';
+            $output_html .= '<div class="SL-buttons-container">';
+            $output_html .= '<button class="SL-regenerate-license-button" onclick="regenerateLicense()">Regenerate License</button>';
+            $output_html .= '</div>';
 
             $output_html .= '<script>
                 function regenerateLicense() {
