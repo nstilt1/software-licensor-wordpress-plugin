@@ -264,7 +264,18 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
 
                 $software_id = $product->get_attribute( 'software_licensor_id' );
                 if ($software_id) {
-                    $license_type = $product->get_attribute('license_type');
+                    // get license type
+                    $variation_id = $cart_item['variation_id'];
+                    if ($variation_id) {
+                        $variation = new WC_Product_Variation($variation_id);
+                        $license_type = $variation->get_attribute('license_type');
+                        if (empty($license_type)) {
+                            $license_type = $product->get_attribute('license_type');
+                        }
+                    } else {
+                        $license_type = $product->get_attribute('license_type');
+                    }
+                    
                     if (array_key_exists($software_id, $products_info)){
                         if ($subtotal > 0 || $products_info[$software_id]['subtotal'] > 0 || $license_type != $products_info[$software_id]['license_type']) {
                             wc_add_notice(sprintf('<strong>You must not purchase different license types for the same plugin</strong>'), 'error');

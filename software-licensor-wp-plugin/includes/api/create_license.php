@@ -75,7 +75,17 @@ function software_licensor_create_license_request($order_id) {
             $has_plugins = true;
             // check if license type in this order exists already
             if (!array_key_exists($software_licensor_id, $product_info_map)) {
-                $license_type = $wc_product->get_attribute('license_type');
+                // get license type
+                $variation_id = $order_item_product->get_variation_id();
+                if ($variation_id) {
+                    $variation = new WC_Product_Variation($variation_id);
+                    $license_type = $variation->get_attribute('license_type');
+                    if (empty($license_type)) {
+                        $license_type = $wc_product->get_attribute('license_type');
+                    }
+                } else {
+                    $license_type = $wc_product->get_attribute('license_type');
+                }
                 software_licensor_error_log('License type found in meta: ' . $license_type);
 
                 if ($license_type == 'perpetual') {
