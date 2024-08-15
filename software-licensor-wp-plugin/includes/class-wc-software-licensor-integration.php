@@ -254,6 +254,8 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
         function software_licensor_validate_cart() {
             $products_info = array();
 
+            $owned_licenses = software_licensor_get_license_info(wp_get_current_user())->getLicensedProducts();
+
             // the following code only checks for duplicates and 
             // different license types for the same product
             foreach ( WC()->cart->get_cart() as $cart_item_key => $cart_item ) {
@@ -275,14 +277,21 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                     } else {
                         $license_type = $product->get_attribute('license_type');
                     }
-                    
+
                     if (array_key_exists($software_id, $products_info)){
                         if ($subtotal > 0 || $products_info[$software_id]['subtotal'] > 0 || $license_type != $products_info[$software_id]['license_type']) {
-                            wc_add_notice(sprintf('<strong>You must not purchase different license types for the same plugin</strong>'), 'error');
+                            wc_add_notice(sprintf('<strong>You must not purchase different license types for the same product.</strong>'), 'error');
                         }
-                        // nothing else needs to be done if the array key exists
-                        // this is just to show the error if needed
-                    }else{
+                    } else {
+                        $owned = $owned_licenses->offsetGet($software_id);
+                        if ($owned) {
+                            $owned_license_type = $owned->getLicenseType();
+                            if ($license_type == "trial") {
+                                wc_add_notice(sprintf("<strong>You cannot get a trial license for a product that you already have a license for.</strong>"), 'error');
+                            } else if ($license_type == "subscription" && $owned_license_type == "perpetual") {
+                                wc_add_notice(sprintf('<strong>You cannot own a subscription license if you already own a perpetual license for the same product.</strong>'), 'error');
+                            }
+                        }
                         $products_info[$software_id] = array(
                             "subtotal" => $subtotal,
                             "license_type" => $license_type
