@@ -32,6 +32,12 @@ It is possible to create `variable products` that are compatible with this WordP
   * Slug: `perpetual`
   * Description: `A perpetual license for this software.`
 
+4. Select your product under `Products>All Products`. Select `Attributes`, then `Add Existing`, and select `License Type`.
+5. Ensure that `visible on the product page` and `used for variations` are both selected.
+6. This should automatically change your product's type from `Simple Product` to `Variable Product`. If not, change your product's type next to `Product data -` at the top left of the product's settings area.
+7. Select `Variations`, then select `Generate variations`, and ensure that all of your license types are showing on this page.
+8. Choose `Save changes`, and now your product has variations!
+
 ## Example styles and scripts for the `[software_licensor_licenses_page]`
 ```html
 <style>
