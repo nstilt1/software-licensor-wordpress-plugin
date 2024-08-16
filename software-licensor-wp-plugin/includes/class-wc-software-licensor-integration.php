@@ -254,7 +254,11 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
         function software_licensor_validate_cart() {
             $products_info = array();
 
-            $owned_licenses = software_licensor_get_license_info(wp_get_current_user())->getLicensedProducts();
+            $license_data = software_licensor_get_license_info(wp_get_current_user());
+            
+            if ($license_data) {
+                $owned_licenses = $license_data->getLicensedProducts();
+            }
 
             // the following code only checks for duplicates and 
             // different license types for the same product
@@ -265,31 +269,44 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 $subtotal = WC()->cart->get_product_subtotal( $product, $cart_item['quantity'] );
 
                 $software_id = $product->get_attribute( 'software_licensor_id' );
+                software_licensor_debug_log('software licensor id = ' . $software_id);
+                software_licensor_debug_log('cart_item: ' . print_r($cart_item, true));
+
+                if (empty($software_id) || !isset($software_id)) {
+                    $software_id = $product->get_attribute('pa_software_licensor_id');
+                }
+                if ($product->is_type('variation')) {
+                    $parent_product = wc_get_product($cart_item['product_id']);
+                    $software_id = $parent_product->get_attribute('software_licensor_id');
+                    software_licensor_debug_log('new software licensor id = ' . $software_id);
+                }
                 if ($software_id) {
                     // get license type
-                    $variation_id = $cart_item['variation_id'];
-                    if ($variation_id) {
-                        $variation = new WC_Product_Variation($variation_id);
-                        $license_type = $variation->get_attribute('license_type');
-                        if (empty($license_type)) {
-                            $license_type = $product->get_attribute('license_type');
-                        }
+                    if ($product->is_type('variation')) {
+                        $license_type = $product->get_attribute('pa_license_type');
+                        software_licensor_debug_log('product is variation; pa_license_type: ' . $license_type);
+                        software_licensor_debug_log('license_type: ' . $product->get_attribute('license_type'));
                     } else {
                         $license_type = $product->get_attribute('license_type');
+                        software_licensor_debug_log('product is not variation; license_type: ' . $license_type);
+                        software_licensor_debug_log('pa_license_type: ' . $product->get_attribute('pa_license_type'));
                     }
+                    $license_type = strtolower($license_type);
 
                     if (array_key_exists($software_id, $products_info)){
                         if ($subtotal > 0 || $products_info[$software_id]['subtotal'] > 0 || $license_type != $products_info[$software_id]['license_type']) {
                             wc_add_notice(sprintf('<strong>You must not purchase different license types for the same product.</strong>'), 'error');
                         }
                     } else {
-                        $owned = $owned_licenses->offsetGet($software_id);
-                        if ($owned) {
-                            $owned_license_type = $owned->getLicenseType();
-                            if ($license_type == "trial") {
-                                wc_add_notice(sprintf("<strong>You cannot get a trial license for a product that you already have a license for.</strong>"), 'error');
-                            } else if ($license_type == "subscription" && $owned_license_type == "perpetual") {
-                                wc_add_notice(sprintf('<strong>You cannot own a subscription license if you already own a perpetual license for the same product.</strong>'), 'error');
+                        if (isset($owned_licenses)) {
+                            $owned = $owned_licenses->offsetGet($software_id);
+                            if ($owned) {
+                                $owned_license_type = $owned->getLicenseType();
+                                if ($license_type == "trial") {
+                                    wc_add_notice(sprintf("<strong>You cannot get a trial license for a product that you already have a license for.</strong>"), 'error');
+                                } else if ($license_type == "subscription" && $owned_license_type == "perpetual") {
+                                    wc_add_notice(sprintf('<strong>You cannot own a subscription license if you already own a perpetual license for the same product.</strong>'), 'error');
+                                }
                             }
                         }
                         $products_info[$software_id] = array(

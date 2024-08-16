@@ -77,15 +77,23 @@ function software_licensor_create_license_request($order_id) {
             if (!array_key_exists($software_licensor_id, $product_info_map)) {
                 // get license type
                 $variation_id = $order_item_product->get_variation_id();
+                software_licensor_debug_log('variation id: ' . $variation_id);
                 if ($variation_id) {
                     $variation = new WC_Product_Variation($variation_id);
                     $license_type = $variation->get_attribute('license_type');
-                    if (empty($license_type)) {
+                    software_licensor_debug_log('license type found in variation: ' . $license_type);
+                    software_licensor_debug_log('license type found as pa_license_type: ' . $variation->get_attribute('pa_license_type'));
+                    software_licensor_debug_log('variation: ' . print_r($variation, true));
+                    software_licensor_debug_log("\n\n\n\n\n\n\n\n\n\n\n\n\n");
+                    software_licensor_debug_log('wc_product: ' . $wc_product);
+                    if (empty($license_type) || !isset($license_type)) {
                         $license_type = $wc_product->get_attribute('license_type');
                     }
                 } else {
                     $license_type = $wc_product->get_attribute('license_type');
                 }
+                $license_type = strtolower($license_type);
+
                 software_licensor_error_log('License type found in meta: ' . $license_type);
 
                 if ($license_type == 'perpetual') {

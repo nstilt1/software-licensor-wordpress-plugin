@@ -15,6 +15,23 @@ Ensure that your website is running PHP 8 or later. This plugin is confirmed to 
 9. Navigate to the Edit Product Page, under attributes, we need to add an attribute called `software_licensor_id` set to the `Product's ID`. Then we'll need an attribute called `license_type` that is set to the license type, such as `perpetual` or `trial`.
 10. Add a new `page`, then insert the following `shortcode`: `[software_licensor_licenses_page]`. This page will now show the user's license information. They can click on a row and it will reveal the active machines. This list can update every 4 hours, or when `regenerate_license` is called, or whenever a new license is purchased. This page can also be styled. Simply hit `inspect element`, then use the class names to style the page. You can also enable some pagination by using the `data-index` field on the `tr`s.
 
+### Creating products with different variations
+
+It is possible to create `variable products` that are compatible with this WordPress plugin.
+
+1. In the WordPress dashboard, navigate to `Products>Attributes`. Add a new attribute called `License Type` with this as the slug: `license_type`.
+2. On the right side of the page on the `License Type` row, select `Configure terms`.
+3. Add your desired terms. For now, only `Trial` and `Perpetual` licenses are supported. To add these terms, we can add the following:
+
+* Trial term:
+  * Name: `Trial`
+  * Slug: `trial`
+  * Description: `A [N] day trial for this software. The trial begins as soon as this license has been activated on your machine.` where `[N]` is the `Trial expiration days` that you have set for your store.
+* Perpetual term:
+  * Name: `Perpetual`
+  * Slug: `perpetual`
+  * Description: `A perpetual license for this software.`
+
 ## Example styles and scripts for the `[software_licensor_licenses_page]`
 ```html
 <style>
