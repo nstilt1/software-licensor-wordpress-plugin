@@ -41,6 +41,20 @@ It is possible to create `variable products` that are compatible with this WordP
 ## Example styles and scripts for the `[software_licensor_licenses_page]`
 ```html
 <style>
+#clipboard-notification-container {
+  background-color: #5bff6c;
+  transition-duration: 0.8s;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  border-radius: 10px;
+}
+
+#clipboard-notication {
+  text-align: center;
+}
+
 .licenses {
   width: 100%;
 }
@@ -49,49 +63,58 @@ It is possible to create `variable products` that are compatible with this WordP
   padding-bottom: 0.25em;
 }
 
+.SL-license-code-container {
+  margin-bottom: 1em;
+}
+  
 .SL-license-code {
   font-size: 16px;
   background-color: #f3f3f3f3;
   cursor: pointer;
+  padding: 2px;
+  border: 1px solid #ccc;
 }
 
 .SL-licenses-table {
   width: 100%;
-  padding-top: 1em;
   text-align: left;
   border: 1px solid;
   border-collapse: collapse;
+  height: auto;
 }
 
-.SL-licenses-table>tbody>tr {
+.SL-licenses-table>tbody>tr:nth-child(odd) {
   cursor: pointer;
 }
 
 .machine-table {
   border: 1px solid;
   border-collapse: collapse;
+  display: table-row;
   width: 100%;
 }
-</style>
-<script>
-  document.getElementsByClassName('SL-license-code')[0].addEventListener('click', function() {
-    navigator.clipboard.writeText(this.innerText)
-        .then(() => {
-            // Show notification on success; change the id based on your html
-            let notification = document.getElementById('div_block-6-2016');
-            notification.style.opacity = "1.0"; // Make the notification visible
 
-            // Hide the notification after 5 seconds
-            setTimeout(() => {
-                notification.style.opacity = "0.0";
-            }, 5000);
-        })
-        .catch(err => {
-            // Handle possible errors
-            console.error('Error copying text: ', err);
-        });
-});
-</script>
+.SL-buttons-container {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.SL-regenerate-license-button {
+  border: 1px solid #666666;
+  border-radius: 4px;
+  text-align: center;
+  line-height: 1.2;
+  background: #666666;
+  color: #ffffff;
+  font-size: 12px;
+  letter-spacing: 1px;
+  outline: none;
+  display: flex;
+  flex-direction: row;
+  cursor: pointer;
+  padding: 16px 24px;
+}
+</style>
 ```
 ## Status
 
