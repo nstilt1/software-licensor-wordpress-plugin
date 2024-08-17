@@ -50,18 +50,63 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
             add_action('woocommerce_update_options_integration_' . $this->id, array($this, 'process_admin_options'));
 
             add_action('admin_menu', array($this, 'software_licensor_admin_menus'));
-            }
+
+            // My Account page settings
+            add_action('init', array($this, 'my_licenses_account_endpoint'));
+            add_filter('woocommerce_account_menu_items', array($this, 'my_licenses_account_menu_items'));
+            add_action('woocommerce_account_user-licenses_endpoint', array($this, 'account_page_display_license'));
+        }
+
+        function my_licenses_account_menu_items($items) {
+            $items['user-licenses'] = __('Licenses', 'woocommerce');
+
+            // reposition the Licenses section
+            $downloads = $items['downloads'];
+            $edit_address = $items['edit-address'];
+            $edit_account = $items['edit-account'];
+            $logout = $items['customer-logout'];
+
+            unset($items['downloads']);
+            unset($items['edit-address']);
+            unset($items['edit-account']);
+            unset($items['customer-logout']);
+
+            $items['downloads'] = $downloads;
+            $items['edit-address'] = $edit_address;
+            $items['edit-account'] = $edit_account;
+            $items['customer-logout'] = $logout;
+            return $items;
+        }
+
+        function my_licenses_account_endpoint() {
+            add_rewrite_endpoint('user-licenses', EP_ROOT | EP_PAGES);
+        }
+
+        function account_page_display_license() {
+            $output_html = $this->get_license_data_html();
+
+            echo $output_html;
+        }
 
         function software_licensor_display_license() {
             software_licensor_error_log('Inside software_licensor_display_license');
             if (!wp_get_current_user()) {
                 wp_die('You must be logged in to view your licenses.');
             }
+            
+            $output_html = $this->get_license_data_html();
+
+            ob_start();
+
+            echo $output_html;
+
+            return ob_get_clean();
+        }
+
+        function get_license_data_html() {
             $license_data = software_licensor_get_license_info(wp_get_current_user());
             if ($license_data === false) {
-                ob_start();
-                echo '<p>No license data to display.</p>';
-                return ob_get_clean();
+                return '<p>No license data to display.</p>';
             }
             $data = [];
             $license_code = $license_data->getLicenseCode();
@@ -116,12 +161,38 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 ]);
                 $counter += 1;        
             }
-            software_licensor_error_log('data: ' . json_encode($data));
 
-            $output_html = '<div class="licenses">';
+            $output_html = '<div id="clipboard-notification-container" style="opacity: 0.0;">';
+            $output_html .= '<div id="clipboard-notification">';
+            $output_html .= 'Your license code has been copied to your clipboard.</div></div>';
+
+            $output_html .= '<div class="licenses">';
             $output_html .= '<div class="SL-license-code-header">License Code:</div>';
             $output_html .= '<div class="SL-license-code-container"><span class="SL-license-code">' . htmlspecialchars($license_code) . '</span></div>';
-            $output_html .= '<table class="SL-licenses-table">';
+
+            $output_html .= "
+<script>
+  document.getElementsByClassName('SL-license-code')[0].addEventListener('click', function() {
+    navigator.clipboard.writeText(this.innerText)
+        .then(() => {
+            // Show notification on success
+            let notification = document.getElementById('clipboard-notification-container');
+            notification.style.opacity = \"1.0\"; // Make the notification visible
+
+            // Hide the notification after 8 seconds
+            setTimeout(() => {
+                notification.style.opacity = \"0.0\";
+            }, 8000);
+        })
+        .catch(err => {
+            // Handle possible errors
+            console.error('Error copying text: ', err);
+        });
+});
+</script>
+";
+
+            $output_html .= '<table class="SL-licenses-table shop_table">';
             $output_html .= '<thead><tr>';
 
             $output_html .= '<th>Product</th>';
@@ -168,6 +239,11 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
             $output_html .= '<div class="SL-buttons-container">';
             $output_html .= '<button class="SL-regenerate-license-button" onclick="regenerateLicense()">Regenerate License</button>';
             $output_html .= '</div>';
+            $output_html .= '<p>';
+            $output_html .= 'You can regenerate your license code if you need to ';
+            $output_html .= 'disable some online-activated machines. You can do ';
+            $output_html .= 'this once every two weeks.';
+            $output_html .= '</p>';
 
             $output_html .= '<script>
                 function regenerateLicense() {
@@ -192,11 +268,7 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 });
             </script></div>';
 
-            ob_start();
-
-            echo $output_html;
-
-            return ob_get_clean();
+            return $output_html;
         }
 
         /**
@@ -269,27 +341,16 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 $subtotal = WC()->cart->get_product_subtotal( $product, $cart_item['quantity'] );
 
                 $software_id = $product->get_attribute( 'software_licensor_id' );
-                software_licensor_debug_log('software licensor id = ' . $software_id);
-                software_licensor_debug_log('cart_item: ' . print_r($cart_item, true));
-
-                if (empty($software_id) || !isset($software_id)) {
-                    $software_id = $product->get_attribute('pa_software_licensor_id');
-                }
                 if ($product->is_type('variation')) {
                     $parent_product = wc_get_product($cart_item['product_id']);
                     $software_id = $parent_product->get_attribute('software_licensor_id');
-                    software_licensor_debug_log('new software licensor id = ' . $software_id);
                 }
                 if ($software_id) {
                     // get license type
                     if ($product->is_type('variation')) {
                         $license_type = $product->get_attribute('pa_license_type');
-                        software_licensor_debug_log('product is variation; pa_license_type: ' . $license_type);
-                        software_licensor_debug_log('license_type: ' . $product->get_attribute('license_type'));
                     } else {
                         $license_type = $product->get_attribute('license_type');
-                        software_licensor_debug_log('product is not variation; license_type: ' . $license_type);
-                        software_licensor_debug_log('pa_license_type: ' . $product->get_attribute('pa_license_type'));
                     }
                     $license_type = strtolower($license_type);
 
