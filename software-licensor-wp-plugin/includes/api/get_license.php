@@ -17,6 +17,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return Protobuf Returns the decoded protobuf `GetLicenseResponse` message
  */
 function software_licensor_get_license_request($user_id) {
+    if (!isset($user_id) || empty($user_id)) {
+        return false;
+    }
     $request_proto = new Get_license_request\GetLicenseRequest();
 
     $request_proto->setUserId($user_id);
@@ -25,7 +28,6 @@ function software_licensor_get_license_request($user_id) {
     $ok = software_licensor_process_request(software_licensor_load_store_id(), 'https://01lzc0nx9e.execute-api.us-east-1.amazonaws.com/v2/get_license_refactor', $request_proto, $response_proto);
 
     if (!$ok) {
-        echo 'Error getting license info';
         return false;
     }
 
