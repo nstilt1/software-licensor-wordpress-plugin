@@ -326,12 +326,14 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
         function software_licensor_validate_cart() {
             $products_info = array();
 
-            $license_data = software_licensor_get_license_info(wp_get_current_user());
+            $user = wp_get_current_user();
+            
+            $license_data = software_licensor_get_license_info($user);
             
             if ($license_data) {
                 $owned_licenses = $license_data->getLicensedProducts();
             }
-
+            $has_license = false;
             // the following code only checks for duplicates and 
             // different license types for the same product
             foreach ( WC()->cart->get_cart() as $cart_item_key => $cart_item ) {
@@ -346,6 +348,7 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                     $software_id = $parent_product->get_attribute('software_licensor_id');
                 }
                 if ($software_id) {
+                    $has_license = true;
                     // get license type
                     if ($product->is_type('variation')) {
                         $license_type = $product->get_attribute('pa_license_type');
@@ -376,6 +379,9 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                         );
                     }
                 }
+            }
+            if ($has_license && (!isset($user->ID) || empty($user->ID))) {
+                wc_add_notice(sprintf('<strong>You must be logged in to obtain a license.</strong>'), 'error');
             }
         }
 
