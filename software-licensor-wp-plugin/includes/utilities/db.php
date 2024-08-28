@@ -158,7 +158,7 @@ function software_licensor_get_license_info($user) {
  * Licensor. This information can be displayed to the user through the software.
  */
 function software_licensor_is_sharing_customer_info() {
-    get_option('software_licensor_is_store_sharing_customer_info', false);
+    return get_option('software_licensor_is_store_sharing_customer_info', false);
 }
 
 /**
