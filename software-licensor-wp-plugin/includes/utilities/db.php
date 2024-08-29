@@ -137,8 +137,8 @@ function software_licensor_get_license_info($user) {
     $decrypted = software_licensor_decrypt_db($user->ID, $encrypted);
 
     $last_check = (int) get_user_meta($user->ID, 'software_licensor_license_timeout', true);
-    // check for updated license info if 4 hours have passed
-    if ( time() - $last_check > 60 * 60 * 4 ) {
+    // check for updated license info if 1 hour has passed
+    if ( time() - $last_check > 60 * 60 * 1 ) {
         $new_license_info = software_licensor_get_license_request($user->ID);
         if ($new_license_info != false) {
             software_licensor_save_license_info($user, $new_license_info);

@@ -240,6 +240,9 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
             $output_html .= '<button class="SL-regenerate-license-button" onclick="regenerateLicense()">Regenerate License</button>';
             $output_html .= '</div>';
             $output_html .= '<p>';
+            $output_html .= 'The data on this page refreshes every hour.';
+            $output_html .= '</p>';
+            $output_html .= '<p>';
             $output_html .= 'You can regenerate your license code if you need to ';
             $output_html .= 'disable some online-activated machines. You can do ';
             $output_html .= 'this once every two weeks.';
