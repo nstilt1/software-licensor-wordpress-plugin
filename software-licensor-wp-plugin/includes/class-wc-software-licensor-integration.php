@@ -536,6 +536,10 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
             );
         }        
 
+        /**
+         * Runs after the user submits the form under 
+         * WooCommerce>Integration>Software Licensor
+         */
         public function process_admin_options()
         {
             echo 'Reached process_admin_options() function';
@@ -566,7 +570,7 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 error_log('saved: ' . $saved);
                 error_log('current store id: ' . $current_store_id);
                 error_log('store id2: ' . get_option('software_licensor_store_id', 'a'));
-                if ($current_store_id === false) {
+                if ($current_store_id === false || software_licensor_load_private_key() === false) {
                     error_log('submitting register store API request');
                     software_licensor_register_store_request(
                         $this->get_option('store_id_prefix'),
@@ -594,6 +598,9 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
             return false;
         }
         
+        /**
+         * Defines admin menus and submenus
+         */
         function software_licensor_admin_menus() {
             // main menu item
             add_menu_page(
@@ -614,6 +621,181 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 'software-licensor-create-update-licensed-product',
                 array($this, 'software_licensor_create_update_licensed_product_page')
             );
+
+            // private key exporting/importing page
+            $import_export_page = add_submenu_page(
+                'software-licensor',
+                'Import/Export Private Key',
+                'Import/Export Private Key',
+                'manage_options',
+                'software-licensor-import-export-private-key',
+                array($this, 'software_licensor_import_export_page')
+            );
+
+            add_action('load-' . $import_export_page, array($this, 'user_export_handler'));
+        }
+
+        /**
+         * Prevents HTML from being appended to Exported data.
+         */
+        function user_export_handler() {
+            if (isset($_POST['export_private_key'])) {
+                $this->software_licensor_export_private_key();
+                exit; // Prevent the admin page from loading and getting appended to the file
+            }
+        }
+
+        function software_licensor_import_export_page() {
+            ?>
+            <div class="wrap">
+                <h2>Import/Export Private Key</h2>
+                <form method="post" enctype="multipart/form-data">
+                    <?php wp_nonce_field('software_licensor_action_key'); ?>
+                    <p>
+                        <label for="private_key_file">Choose your private key file (only required for import):</label>
+                        <input type="file" name="private_key_file" id="private_key_file">
+                    </p>
+                    <p>
+                        <label for="user_password">Enter your password:</label>
+                        <input type="password" name="user_password" id="user_password" required>
+                    </p>
+                    <p>
+                        <input type="submit" name="import_private_key" value="Import Private Key">
+                        <input type="submit" name="export_private_key" value="Export Private Key">
+                    </p>
+                </form>
+            </div>
+            <?php
+        
+            if (isset($_POST['import_private_key'])) {
+                $this->software_licensor_import_private_key();
+            }
+        
+            if (isset($_POST['export_private_key'])) {
+                $this->software_licensor_export_private_key();
+            }
+        }
+
+        function software_licensor_import_private_key() {
+            // Check if the current user is an admin
+            if (!current_user_can('manage_options')) {
+                wp_die('You do not have sufficient permissions to access this page.');
+            }
+        
+            // Verify the nonce
+            if (!check_admin_referer('software_licensor_action_key')) {
+                wp_die('Security check failed.');
+            }
+        
+            // Handle the file upload
+            if (!isset($_FILES['private_key_file']) || empty($_FILES['private_key_file']['tmp_name'])) {
+                wp_die('No file uploaded.');
+            }
+        
+            // Read the JSON file content
+            $json_data = file_get_contents($_FILES['private_key_file']['tmp_name']);
+            $decoded_data = json_decode($json_data, true);
+        
+            if (!isset($decoded_data['private_key'])) {
+                wp_die('Invalid key file. The private key is missing.');
+            }
+
+            if (!isset($decoded_data['store_id'])) {
+                wp_die('Invalid key file. Store ID is missing.');
+            }
+
+            if (!isset($decoded_data['products'])) {
+                wp_die('Invalid key file. Products list is missing.');
+            }
+        
+            // Ask for the user's password
+            if (!isset($_POST['user_password']) || empty($_POST['user_password'])) {
+                wp_die('Password is required.');
+            }
+        
+            // Extract the encrypted private key from the JSON data
+            $encrypted_key = $decoded_data['private_key'];
+        
+            // Attempt to decrypt and load the private key using the provided password
+            $private_key = openssl_pkey_get_private($encrypted_key, $_POST['user_password']);
+        
+            if ($private_key === false) {
+                wp_die('Incorrect password or failed to load the private key.');
+            }
+        
+            // Save the decrypted private key
+            software_licensor_save_private_key($private_key);
+            software_licensor_save_store_id($decoded_data['store_id']);
+            software_licensor_save_products_array($decoded_data['products']);
+        
+            echo '<div class="updated"><p>Private key imported successfully.</p></div>';
+        }
+
+        function software_licensor_export_private_key() {
+            // Start output buffering
+            ob_start();
+        
+            // Check if the current user is an admin
+            if (!current_user_can('manage_options')) {
+                ob_end_clean();
+                wp_die('You do not have sufficient permissions to access this page.');
+            }
+        
+            // Verify the nonce
+            if (!check_admin_referer('software_licensor_action_key')) {
+                ob_end_clean();
+                wp_die('Security check failed.');
+            }
+        
+            // Ask for the user's password
+            if (!isset($_POST['user_password']) || empty($_POST['user_password'])) {
+                ob_end_clean();
+                wp_die('Password is required.');
+            }
+        
+            $user = wp_get_current_user();
+            if (!wp_check_password($_POST['user_password'], $user->data->user_pass, $user->ID)) {
+                ob_end_clean();
+                wp_die('Incorrect password.');
+            }
+        
+            // Load the private key
+            $private_key = software_licensor_load_private_key();
+        
+            // Use openssl_pkey_export to export the key with a passphrase
+            $exported_key = '';
+            $passphrase = $_POST['user_password'];
+            if (!openssl_pkey_export($private_key, $exported_key, $passphrase)) {
+                ob_end_clean();
+                wp_die('Failed to export the private key.');
+            }
+        
+            $result = array(
+                'store_id' => software_licensor_load_store_id(),
+                'private_key' => $exported_key,
+                'products' => software_licensor_get_products_array(),
+            );
+        
+            $data = json_encode($result);
+        
+            // Clean the output buffer before sending the response
+            ob_clean();
+        
+            // Set the headers and output the JSON
+            header('Content-Type: application/json');
+            header('Content-Disposition: attachment; filename="store_details.json"');
+            header('Content-Length: ' . strlen($data));
+            header('Expires: 0');
+            header('Cache-Control: must-revalidate');
+        
+            // Output the JSON data
+            //echo $data;
+            wp_send_json($result);
+            //file_put_contents('php://output', $data);
+        
+            // End the output buffer and flush the output
+            ob_end_clean();
+            exit();
         }
 
         function software_licensor_create_update_licensed_product_page() {
