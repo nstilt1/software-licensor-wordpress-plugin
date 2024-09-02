@@ -126,6 +126,7 @@ So far, I have successfully tested these functionalities in the WordPress Plugin
 * creating a license via a transaction with `software_licensor_id` and `license_type` attributes set on the Product
 * displaying licenses in a style-able webpage, a PHP **shortcode** called `software_licensor_licenses_page`
 * regenerating a license code via the button on the `software_licensor_licenses_page`, and also verifying that the errors are descriptive enough when trying to regenerate licenses too soon since the last time.
+* Exporting and importing the store information
 
 The only things that have not been successfully tested so far are:
 * The code that is supposed to insert licenses into the email response after taking an order.
@@ -148,6 +149,13 @@ The only things that have not been successfully tested so far are:
   
   * There is an API method that can remove machines from a license, but it has not been implemented in this WordPress Plugin due to the simplicity of the license regeneration API. The license regeneration method will remove all `online machines` from a license, and return a new license code. It will not remove `offline machines`.
 
+## Site Migrations and Security
+
+It is possible to migrate your website to a new host, but there are some caveats. The store's private key is encrypted using a key and salt from your site's `wp-config.php` file, so you may not be able to simply use a WordPress Site Migration plugin to completely migrate the site, because the private key will not be able to be decrypted successfully, and you will see an error on any page that requires decrypting anything in the database. It is important that the store's private key is encrypted because this is how the `Software Licensor` backend authenticates your requests. By encrypting the private key this way, an attacker would not only have to get a hold of your site's database, but they would also have to get a hold of your site's `wp-config.php` file.
+
+The private key exporting/importing form requires the user to be an admin, and it also asks for the admin's password. The password is checked with the locally stored hash, and then that password is used to encrypt the private key. The same password must be used to decrypt the private key, and this works pretty nicely since site migration tools will copy over the accounts from the old website. **You must remember to use a strong password for your admin accounts for this to be secure.**
+
+After exporting your site's private key, inspect the downloaded file to ensure that the file is a valid `json` file. There's a slight chance that the file will be part of an `HTML` file, and if it is, just try exporting the data again. I ran into some issues when I was developing this feature, and the last time I tried it, it worked, but it could have been a fluke. There was only a single StackOverflow post that I could find that sort-of fixed it, but it was a weird solution for a weird problem.
 
 ## Development
 
