@@ -727,6 +727,7 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
             software_licensor_save_private_key($private_key);
             software_licensor_save_store_id($decoded_data['store_id']);
             software_licensor_save_products_array($decoded_data['products']);
+            software_licensor_update_pubkeys(true);
         
             echo '<div class="updated"><p>Private key imported successfully.</p></div>';
         }
