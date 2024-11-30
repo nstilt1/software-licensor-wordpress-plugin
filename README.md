@@ -51,7 +51,7 @@ It is possible to create `variable products` that are compatible with this WordP
   border-radius: 10px;
 }
 
-#clipboard-notication {
+#clipboard-notification {
   text-align: center;
 }
 
