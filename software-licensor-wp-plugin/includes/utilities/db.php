@@ -129,8 +129,15 @@ function software_licensor_save_license_info($user, $proto) {
  * Retrieves any cached license info for a specific user as a protobuf message, 
  * or fetches potentially updated license info if enough time has passed since 
  * the last request.
+ * 
+ * @param WP_User $user The WordPress user object for whom the license info is retrieved.
+ * @param bool $may_make_request Optional. Whether to allow making an API request to update the license information.
+ * 
+ * @return Get_license_request\GetLicenseResponse|false The license 
+ * information as a `GetLicenseResponse` object on success, or `false` if an 
+ * updated license could not be retrieved.
  */
-function software_licensor_get_license_info($user) {
+function software_licensor_get_license_info($user, $may_make_request = true) {
     software_licensor_error_log('inside software_licensor_get_license_info');
     $proto = new Get_license_request\GetLicenseResponse();
     $encrypted = get_user_meta($user->ID, 'software_licensor_license_info', true);
@@ -138,7 +145,7 @@ function software_licensor_get_license_info($user) {
 
     $last_check = (int) get_user_meta($user->ID, 'software_licensor_license_timeout', true);
     // check for updated license info if 1 hour has passed
-    if ( time() - $last_check > 60 * 60 * 1 ) {
+    if ($may_make_request && time() - $last_check > 60 * 60 * 1 ) {
         $new_license_info = software_licensor_get_license_request($user->ID);
         if ($new_license_info != false) {
             software_licensor_save_license_info($user, $new_license_info);
