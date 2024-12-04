@@ -35,6 +35,8 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
 
             add_action('woocommerce_check_cart_items', array($this, 'software_licensor_validate_cart'));
             add_action('woocommerce_payment_complete', 'software_licensor_create_license_request');
+            add_action('woocommerce_thankyou', 'software_licensor_prepend_license_code', 1, 1);
+            add_action('woocommerce_thankyou', 'software_licensor_show_license_code_after_purchase', 999, 1);
             
             // this was supposed to include the license code in an email to the user,
             // but it does not work

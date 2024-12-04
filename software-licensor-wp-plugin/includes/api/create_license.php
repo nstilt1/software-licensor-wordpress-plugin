@@ -182,4 +182,48 @@ function software_licensor_create_license_request($order_id) {
     }
 }
 
+function software_licensor_prepend_license_code($order_id) {
+    ob_start();
+}
+
+function software_licensor_show_license_code_after_purchase($order_id) {
+    $original_content = ob_get_clean();
+    $order = wc_get_order($order_id);
+    $user = $order->get_user();
+
+    $license_proto = software_licensor_get_license_info($user, false);
+
+    if ($license_proto) {
+        $output_html = '<div id="clipboard-notification-container" style="opacity: 0.0;">';
+        $output_html .= '<div id="clipboard-notification">';
+        $output_html .= 'Your license code has been copied to your clipboard.</div></div>';
+
+        $output_html .= '<div class="licenses">';
+        $output_html .= '<div class="SL-license-code-header">License Code:</div>';
+        $output_html .= '<div class="SL-license-code-container"><span class="SL-license-code">' . htmlspecialchars($license_proto->getLicenseCode()) . '</span></div>';
+        $output_html .= '</div>';
+
+        $output_html .= '<script>';
+        $output_html .= "
+        document.getElementsByClassName('SL-license-code')[0].addEventListener('click', function() {
+            navigator.clipboard.writeText(this.innerText)
+                .then(() => {
+                    let notification = document.getElementById('clipboard-notification-container');
+                    notification.style.opacity = '1.0';
+
+                    setTimeout(() => {
+                        notification.style.opacity = '0.0';
+                    }, 8000);
+                })
+                .catch(err => {
+                    console.error('Error copying text: ', err);
+                });
+        });
+        </script>";
+        echo $output_html . $original_content;
+    } else {
+        echo $original_content;
+    }
+}
+
 ?>

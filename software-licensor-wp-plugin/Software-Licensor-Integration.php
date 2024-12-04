@@ -2,10 +2,10 @@
 /**
  * Plugin Name: Software Licensor Integration
  * Plugin URI: https://www.softwarelicensor.com
- * Description: A plugin for selling software licenses through Software Licensor
+ * Description: A plugin for handling software licenses through Software Licensor
  * Author: Noah Stiltner
  * Author URI: https://www.hyperformancesolutions.com
- * Version: 1.0
+ * Version: 1.1
  * Requires PHP: 8.0
  *
  * This program is free software: you can redistribute it and/or modify
