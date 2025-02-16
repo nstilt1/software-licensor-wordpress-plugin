@@ -395,117 +395,13 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
          */
         public function init_form_fields() {
             $this->form_fields = array(
-                'store_id_prefix' => array(
-                    'title'             => __( 'Store ID Prefix', 'software-licensor' ),
+                'store_id' => array(
+                    'title'             => __( 'Store ID', 'software-licensor' ),
                     'type'              => 'textarea',
-                    'description'       => __( 'Enter your desired Store ID Prefix.', 'software-licensor' ),
+                    'description'       => __( 'Enter your Store ID/API Key.', 'software-licensor' ),
                     'desc_tip'          => true,
                     'default'           => '',
                     'required'          => true,
-                ),
-                'email' => array(
-                    'title' => __( 'Email', 'software-licensor' ),
-                    'type' => 'text',
-                    'description' => __( 'Enter your email address.', 'software-licensor' ),
-                    'desc_tip' => true,
-                    'default' => '',
-                    'required'          => true,
-                ),
-                'first_name' => array(
-                    'title' => __( 'First Name', 'software-licensor' ),
-                    'type' => 'text',
-                    'description' => __( 'Enter your first name.', 'software-licensor' ),
-                    'desc_tip' => true,
-                    'default' => '',
-                    'required' => true,
-                ),
-                'last_name' => array(
-                    'title' => __( 'Last Name', 'software-licensor' ),
-                    'type' => 'text',
-                    'description' => __( 'Enter your last name.', 'software-licensor' ),
-                    'desc_tip' => true,
-                    'default' => '',
-                    'required' => true,
-                ),
-                'discord_username' => array(
-                    'title' => __( 'Discord Username', 'software-licensor' ),
-                    'type' => 'text',
-                    'description' => __( 'Enter your Discord username.', 'software-licensor' ),
-                    'desc_tip' => true,
-                    'default' => '',
-                    'required' => true,
-                ),
-                'offline_frequency_hours' => array(
-                    'title' => __( 'Offline License Check-up Frequency (hours)', 'software-licensor' ),
-                    'type' => 'text',
-                    'description' => __( 'Enter your desired license check-up rate for offline licenses. Note that with offline machines, they may never check up.', 'software-licensor' ),
-                    'desc_tip' => true,
-                    'default' => '',
-                    'required' => true,
-                    'numeric' => true
-                ),
-                'perpetual_frequency_hours' => array(
-                    'title' => __( 'Perpetual License Check-up Frequency (hours)', 'software-licensor' ),
-                    'type' => 'text',
-                    'description' => __( 'Enter your desired license check-up rate for perpetual licenses.', 'software-licensor' ),
-                    'desc_tip' => true,
-                    'default' => '',
-                    'required' => true,
-                    'numeric' => true
-                ),
-                'perpetual_expiration_days' => array(
-                    'title' => __( 'Perpetual License Expiration (days)', 'software-licensor' ),
-                    'type' => 'text',
-                    'description' => __( 'Enter your desired perpetual license expiration period. The expiration period is renewed every time that a machine checks up with the service.', 'software-licensor' ),
-                    'desc_tip' => true,
-                    'default' => '',
-                    'required' => true,
-                    'numeric' => true
-                ),
-                'subscription_frequency_hours' => array(
-                    'title' => __( 'Subscription License Check-up Frequency (hours)', 'software-licensor' ),
-                    'type' => 'text',
-                    'description' => __( 'Enter your desired license check-up rate for subscription licenses.', 'software-licensor' ),
-                    'desc_tip' => true,
-                    'default' => '',
-                    'required' => true,
-                    'numeric' => true
-                ),
-                'subscription_expiration_days' => array(
-                    'title' => __( 'Subscription License Expiration (days)', 'software-licensor' ),
-                    'type' => 'text',
-                    'description' => __( 'Enter your desired subscription license expiration period. This only affects when the license expires on the client machines, not when their subscription period ends, so this value can be less than how long their subscription is for, and will require the client side code to check up with the service at least once during this period.', 'software-licensor' ),
-                    'desc_tip' => true,
-                    'default' => '',
-                    'required' => true,
-                    'numeric' => true
-                ),
-                'subscription_leniency_offset_hours' => array(
-                    'title' => __( 'Subscription Period Leniency/Offset (hours)', 'software-licensor' ),
-                    'type' => 'text',
-                    'description' => __( 'This value will offset the overall expiration of a subscription period to attempt to counteract any delays in server communication. The client is not always going to be online, and servers might not always be on time. You never know when there might be an outage.', 'software-licensor' ),
-                    'desc_tip' => true,
-                    'default' => '',
-                    'required' => true,
-                    'numeric' => true
-                ),
-                'trial_frequency_hours' => array(
-                    'title' => __( 'Trial License Check-up Frequency (hours)', 'software-licensor' ),
-                    'type' => 'text',
-                    'description' => __( 'Enter your desired license check-up rate for offline licenses.', 'software-licensor' ),
-                    'desc_tip' => true,
-                    'default' => '',
-                    'required' => true,
-                    'numeric' => true
-                ),
-                'trial_expiration_days' => array(
-                    'title' => __( 'Trial License Expiration (days)', 'software-licensor' ),
-                    'type' => 'text',
-                    'description' => __( 'Enter your desired expiration period for trial licenses. This is the actual amount of days between the first activation and when the trial license will end. Yes, the timer doesn\'nt start until the user activates their license for the first time.', 'software-licensor' ),
-                    'desc_tip' => true,
-                    'default' => '',
-                    'required' => true,
-                    'numeric' => true
                 ),
                 'share_customer_info' => array(
                     'title' => __( 'Share Customer Info', 'software-licensor' ),
@@ -575,19 +471,7 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 if ($current_store_id === false || software_licensor_load_private_key() === false) {
                     error_log('submitting register store API request');
                     software_licensor_register_store_request(
-                        $this->get_option('store_id_prefix'),
-                        $this->get_option('email'),
-                        $this->get_option('first_name'),
-                        $this->get_option('last_name'),
-                        $this->get_option('discord_username'),
-                        $this->get_option('offline_frequency_hours'),
-                        $this->get_option('perpetual_expiration_days'),
-                        $this->get_option('perpetual_frequency_hours'),
-                        $this->get_option('subscription_expiration_days'),
-                        $this->get_option('subscription_leniency_offset_hours'),
-                        $this->get_option('subscription_frequency_hours'),
-                        $this->get_option('trial_expiration_days'),
-                        $this->get_option('trial_frequency_hours')
+                        $this->get_option('store_id')
                     );
                 }
                 if ($saved) {
