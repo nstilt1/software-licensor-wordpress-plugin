@@ -1,7 +1,7 @@
 === Software Licensor Integration ===
-Contributors: (this should be a list of wordpress.org userid's)
-Donate link: https://example.com/
-Tags: tag1, tag2
+Contributors: @hyperformancesolutions
+Donate link: https://buymeacoffee.com/alteredbrainchemistry
+Tags: licensing, api
 Requires at least: 4.7
 Tested up to: 6.5
 Stable tag: 4.3

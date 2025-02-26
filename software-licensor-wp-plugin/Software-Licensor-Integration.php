@@ -4,7 +4,7 @@
  * Plugin URI: https://www.softwarelicensor.com
  * Description: A plugin for handling software licenses through Software Licensor
  * Author: Noah Stiltner
- * Author URI: https://www.hyperformancesolutions.com
+ * Author URI: https://www.alteredbrainchemistry.com
  * Version: 1.1
  * Requires PHP: 8.0
  *
