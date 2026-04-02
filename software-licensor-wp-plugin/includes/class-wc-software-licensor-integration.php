@@ -125,9 +125,7 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 $machines = [];
                 $license_type = $product_data->getLicenseType();
                 $expiration = $product_data->getExpirationOrRenewal();
-                if (is_numeric($expiration) && $expiration > 0) {
-                    $expiration = date("d M Y", $expiration);
-                }
+
                 $offline_machines = $product_data->getOfflineMachines();
                 $online_machines = $product_data->getOnlineMachines();
                 $machine_limit = $product_data->getMachineLimit();
@@ -135,7 +133,7 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 
                 foreach ($offline_machines as $index => $m) {
                     array_push($machines, [
-                        'id' => $m->getId(),
+                        'id' => substr((string) $m->getId(), 0, 10),
                         'os' => $m->getOs(),
                         'computer_name' => $m->getComputerName(),
                         'activation_type' => 'offline'
@@ -143,7 +141,7 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 }
                 foreach ($online_machines as $index => $m) {
                     array_push($machines, [
-                        'id' => $m->getId(),
+                        'id' => substr((string) $m->getId(), 0, 10),
                         'os' => $m->getOs(),
                         'computer_name' => $m->getComputerName(),
                         'activation_type' => 'online'
@@ -210,7 +208,11 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 $output_html .= '<tr class="SL-product-row" data-index="' . htmlspecialchars($item['index']) . '">';
                 $output_html .= '<td>' . stripslashes(htmlspecialchars($item['product_name'])) . '</td>';
                 $output_html .= '<td>' . htmlspecialchars($item['license_type']) . '</td>';
-                $output_html .= '<td>' . htmlspecialchars($item['expiration']) . '</td>';
+                if ($item['expiration'] != '0' && $item['expiration'] != 0 && is_numeric($item['expiration'])) {
+                    $output_html .= '<td class="sl-expiration" data-ts="' . esc_attr($item['expiration']) . '"></td>';
+                } else {
+                    $output_html .= '<td>' . htmlspecialchars($item['expiration']) . '</td>';
+                }
                 $output_html .= '<td>' . htmlspecialchars($item['machine_count']) . '/' . htmlspecialchars($item['machine_limit']) . '</td>';
                 $output_html .= '</tr>';
 
@@ -269,6 +271,24 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                                 nextRow.style.display = "none";
                             }
                         });
+                    });
+
+                    document.querySelectorAll(".sl-expiration").forEach(function(el) {
+                        const ts = parseInt(el.dataset.ts, 10);
+
+                        if (!isNaN(ts) && ts > 0) {
+                            const date = new Date(ts * 1000);
+
+                            el.textContent = date.toLocaleString(undefined, {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit"
+                            });
+                        } else {
+                            el.textContent = "—";
+                        }
                     });
                 });
             </script></div>';
@@ -406,7 +426,17 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 'share_customer_info' => array(
                     'title' => __( 'Share Customer Info', 'software-licensor' ),
                     'type' => 'checkbox',
-                    'description' => __( 'Optionally share customer info with Software Licensor. Sharing this will enable the possibility of customer\'s contact information to be visible in the licensed software (you would also need to display it with your client side code). We do not sell or share personal customer information, and the information will be encrypted in transit and at rest. If you check this box, you will need to include a statement in your privacy policy that Software Licensor is one of the 3rd parties that you are sharing customer data with. The collected data primarily includes names and emails, and can also include computer names, OS names, MAC addresses, and some hardware information.', 'software-licensor' ),
+                    'description' => __( 'Optionally share customer info with ' . 
+                        'Software Licensor. Sharing this will enable the ' . 
+                        'possibility of customer\'s contact information to be ' . 
+                        'visible in your licensed software (you would also need ' . 
+                        'to display it with your client side code). We do not ' . 
+                        'sell or share personal customer information, and the ' . 
+                        'information will be encrypted in transit and at rest. ' . 
+                        'If you check this box, you will need to include a ' . 
+                        'statement in your privacy policy that Software Licensor ' . 
+                        'is one of the 3rd parties that you are sharing customer  ' .
+                        'data with. The collected data primarily includes names and emails, and can also include computer names, OS names, MAC addresses, and some hardware information.', 'software-licensor' ),
                     'default' => '',
                     'label' => 'Share customer info',
                 ),
@@ -440,7 +470,6 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
          */
         public function process_admin_options()
         {
-            echo 'Reached process_admin_options() function';
             $all_settings_valid = true;
             $settings = $this->get_form_fields();
     
@@ -498,6 +527,16 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
                 'dashicons-admin-network'
             );
 
+            // store registration
+            add_submenu_page(
+                'software-licensor',
+                'Store Registration',
+                'Store Registration',
+                'manage_options',
+                'software-licensor-store-registration',
+                array($this, 'software_licensor_store_registration_page')
+            );
+
             // product creation page
             add_submenu_page(
                 'software-licensor',
@@ -519,6 +558,38 @@ if ( ! class_exists( 'WC_Software_Licensor_Integration' ) ) :
             );
 
             add_action('load-' . $import_export_page, array($this, 'user_export_handler'));
+        }
+
+        public function software_licensor_store_registration_page() {
+            if (!current_user_can('manage_options')) {
+                wp_die(__('You do not have sufficient permissions to access this page.', 'software-licensor'));
+            }
+
+            if (
+                isset($_POST['software_licensor_store_registration_nonce']) &&
+                wp_verify_nonce(
+                    sanitize_text_field(wp_unslash($_POST['software_licensor_store_registration_nonce'])),
+                    'software_licensor_store_registration_save'
+                )
+            ) {
+                $this->process_admin_options();
+                echo '<div class="updated"><p>' . esc_html__('Settings saved.', 'software-licensor') . '</p></div>';
+            }
+
+            echo '<div class="wrap">';
+            echo '<h1>' . esc_html__('Store Registration', 'software-licensor') . '</h1>';
+            echo '<form method="post" action="">';
+
+            wp_nonce_field('software_licensor_store_registration_save', 'software_licensor_store_registration_nonce');
+
+            echo '<table class="form-table">';
+            $this->generate_settings_html();
+            echo '</table>';
+
+            submit_button();
+
+            echo '</form>';
+            echo '</div>';
         }
 
         /**

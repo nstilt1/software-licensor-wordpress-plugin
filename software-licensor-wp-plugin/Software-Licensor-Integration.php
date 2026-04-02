@@ -5,7 +5,7 @@
  * Description: A plugin for handling software licenses through Software Licensor
  * Author: Noah Stiltner
  * Author URI: https://www.alteredbrainchemistry.com
- * Version: 1.1
+ * Version: 1.1.1
  * Requires PHP: 8.0
  *
  * This program is free software: you can redistribute it and/or modify
