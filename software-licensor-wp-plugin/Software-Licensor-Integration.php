@@ -5,14 +5,14 @@
  * Description: A plugin for handling software licenses through Software Licensor
  * Author: Noah Stiltner
  * Author URI: https://www.alteredbrainchemistry.com
- * Version: 1.1.1
+ * Version: 1.1.2
  * Requires PHP: 8.0
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * Do not attempt to maliciously abuse the Software Licensor API. Doing so
  * could result in a ban.
  *
@@ -23,11 +23,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit; // Exit if accessed directly
+    exit;
 }
 
 require_once __DIR__ . '/vendor/autoload.php';
@@ -79,34 +78,55 @@ require_once 'includes/api/register_store.php';
 require_once 'includes/api/requests_and_responses.php';
 
 if ( ! class_exists( 'WC_Software_Licensor' ) ) :
-class WC_Software_licensor {
-	/**
-	* Construct the plugin.
-	*/
-	public function __construct() {
-		add_action( 'plugins_loaded', array( $this, 'init' ) );
-	}
-	/**
-	* Initialize the plugin.
-	*/
-	public function init() {
-		// Checks if WooCommerce is installed.
-		if ( class_exists( 'WC_Integration' ) ) {
-			// Include our integration class.
-			include_once 'includes/class-wc-software-licensor-integration.php';
-			// Register the integration.
-			add_filter( 'woocommerce_integrations', array( $this, 'add_integration' ) );
-		} else {
-			// throw an admin error if you like
-		}
-	}
-	/**
-	 * Add a new integration to WooCommerce.
-	 */
-	public function add_integration( $integrations ) {
-		$integrations[] = 'WC_Software_Licensor_Integration';
-		return $integrations;
-	}
+
+class WC_Software_Licensor {
+
+    /**
+     * @var WC_Software_Licensor_Integration|null
+     */
+    private $integration = null;
+
+    public function __construct() {
+        add_action( 'plugins_loaded', array( $this, 'init' ), 20 );
+    }
+
+    /**
+     * Initialize the plugin after WooCommerce is available.
+     *
+     * @return void
+     */
+    public function init() {
+        if ( ! class_exists( 'WooCommerce' ) ) {
+            add_action( 'admin_notices', array( $this, 'woocommerce_missing_notice' ) );
+            return;
+        }
+
+        require_once plugin_dir_path( __FILE__ ) . 'includes/class-wc-software-licensor-integration.php';
+
+        if ( class_exists( 'WC_Software_Licensor_Integration' ) ) {
+            $this->integration = new WC_Software_Licensor_Integration();
+        }
+    }
+
+    /**
+     * Display an admin notice if WooCommerce is not active.
+     *
+     * @return void
+     */
+    public function woocommerce_missing_notice() {
+        if ( ! current_user_can( 'activate_plugins' ) ) {
+			echo '<div class="notice notice-error"><p>';
+			echo esc_html__('Software Licensor Integration requires WooCommerce to be installed and active, but you do not have permission to activate plugins.', 'software-licensor');
+			echo '</p></div>';
+            return;
+        }
+
+        echo '<div class="notice notice-error"><p>';
+        echo esc_html__( 'Software Licensor Integration requires WooCommerce to be installed and active.', 'software-licensor' );
+        echo '</p></div>';
+    }
 }
-$WC_Software_Licensor = new WC_Software_Licensor( __FILE__ );
+
+new WC_Software_Licensor();
+
 endif;
