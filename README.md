@@ -4,10 +4,9 @@
 
 Ensure that your website is running PHP 8 or later. This plugin is confirmed to be working with PHP 8.3.
 
-1. Clone this repo.
-2. Zip `software-licensor-wp-plugin`
-3. Upload the plugin to your website.
-4. Navigate from the admin dashboard to `WooCommerce>Settings>Integration>Software Licensor`.
+1. Clone this repo and zip `software-licensor-wp-plugin`, or download the latest release.
+3. Upload the plugin (the zip file) to your website.
+4. Navigate from the admin dashboard to `Software Licensor>Store Registration`.
 5. Fill out the form and click save. If the form is missing data, the request might not go through and you won't be able to see a store ID in the next step.
 6. Navigate from the admin dashboard to `Software Licensor>Software Licensor`. Verify that you can see a roughly 64-character long string at the top under `Store ID`. You will need to include this `store_id` in the client side code.
 7. Navigate to `Software Licensor>Create/Update Licensed Product`. Fill out the form fields. Notice the `Allow Offline` checkbox. Offline license activations are not currently supported, but there is more info about them in the `Things not yet implemented in this WordPress Plugin` section. For now, I would recommend setting it to disallow offline licenses, as this setting can be easily changed by pasting the product ID into the `Product ID/prefix` field, and copying or updating the version in the `version` field.
