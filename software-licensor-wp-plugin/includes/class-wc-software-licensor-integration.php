@@ -26,6 +26,11 @@ class WC_Software_Licensor_Integration {
     private const LEGACY_SETTINGS_OPTION = 'woocommerce_software-licensor_settings';
 
     /**
+     * WooCommerce product meta key for linked Easy Digital Downloads IDs.
+     */
+    private const WOO_EDD_DOWNLOAD_IDS_META_KEY = '_software_licensor_edd_download_ids';
+
+    /**
      * Cached settings.
      *
      * @var array<string, mixed>
@@ -52,7 +57,8 @@ class WC_Software_Licensor_Integration {
         $this->debug    = $this->get_option( 'debug', 'no' );
 
         add_action( 'woocommerce_check_cart_items', array( $this, 'software_licensor_validate_cart' ) );
-        add_action( 'woocommerce_payment_complete', 'software_licensor_create_license_request' );
+        add_action( 'woocommerce_payment_complete', array( $this, 'handle_woocommerce_payment_complete' ), 5 );
+        add_action( 'woocommerce_payment_complete', 'software_licensor_create_license_request', 10 );
         add_action( 'woocommerce_thankyou', 'software_licensor_prepend_license_code', 1, 1 );
         add_action( 'woocommerce_thankyou', 'software_licensor_show_license_code_after_purchase', 999, 1 );
 
@@ -62,10 +68,15 @@ class WC_Software_Licensor_Integration {
         add_shortcode( 'software_licensor_licenses_page', array( $this, 'software_licensor_display_license' ) );
 
         add_action( 'admin_menu', array( $this, 'software_licensor_admin_menus' ) );
+        add_action( 'add_meta_boxes', array( $this, 'add_woo_product_meta_box' ) );
+        add_action( 'save_post_product', array( $this, 'save_woo_product_meta_box' ), 10, 2 );
+        add_action( 'woocommerce_product_options_general_product_data', array( $this, 'render_woo_product_data_panel_fields' ) );
+        add_action( 'woocommerce_process_product_meta', array( $this, 'save_woo_product_data_panel_fields' ) );
 
         add_action( 'init', array( $this, 'my_licenses_account_endpoint' ) );
         add_filter( 'woocommerce_account_menu_items', array( $this, 'my_licenses_account_menu_items' ) );
         add_action( 'woocommerce_account_user-licenses_endpoint', array( $this, 'account_page_display_license' ) );
+        add_filter( 'woocommerce_get_customer_available_downloads', array( $this, 'append_linked_edd_downloads_to_account_downloads' ), 10, 1 );
     }
 
     /**
@@ -633,6 +644,346 @@ document.addEventListener('DOMContentLoaded', function () {
         </script></div>';
 
         return $output_html;
+    }
+
+
+    /**
+     * Render WooCommerce product data panel fields for the EDD bridge.
+     *
+     * @return void
+     */
+    public function render_woo_product_data_panel_fields() {
+        if ( ! function_exists( 'woocommerce_wp_text_input' ) ) {
+            return;
+        }
+
+        echo '<div class="options_group software-licensor-edd-bridge">';
+
+        woocommerce_wp_text_input(
+            array(
+                'id'                => 'software_licensor_edd_download_ids',
+                'label'             => __( 'Linked EDD Download IDs', 'software-licensor' ),
+                'description'       => __( 'Enter one or more Easy Digital Downloads IDs separated by commas. Customers who buy this WooCommerce product will see the current files from those linked downloads in My Account → Downloads.', 'software-licensor' ),
+                'desc_tip'          => true,
+                'type'              => 'text',
+                'placeholder'       => '123,456',
+                'value'             => (string) get_post_meta( get_the_ID(), self::WOO_EDD_DOWNLOAD_IDS_META_KEY, true ),
+            )
+        );
+
+        echo '</div>';
+    }
+
+    /**
+     * Save WooCommerce product data panel fields for the EDD bridge.
+     *
+     * @param int $post_id Product ID.
+     * @return void
+     */
+    public function save_woo_product_data_panel_fields( $post_id ) {
+        if ( ! current_user_can( 'edit_post', $post_id ) ) {
+            return;
+        }
+
+        $raw_ids      = isset( $_POST['software_licensor_edd_download_ids'] ) ? sanitize_text_field( wp_unslash( $_POST['software_licensor_edd_download_ids'] ) ) : '';
+        $download_ids = $this->parse_download_ids_string( $raw_ids );
+
+        if ( empty( $download_ids ) ) {
+            delete_post_meta( $post_id, self::WOO_EDD_DOWNLOAD_IDS_META_KEY );
+            return;
+        }
+
+        update_post_meta( $post_id, self::WOO_EDD_DOWNLOAD_IDS_META_KEY, implode( ',', $download_ids ) );
+    }
+
+    /**
+     * Add a WooCommerce product meta box for linked Easy Digital Downloads downloads.
+     *
+     * @return void
+     */
+    public function add_woo_product_meta_box() {
+        add_meta_box(
+            'software-licensor-edd-download-links',
+            __( 'Software Licensor Downloads', 'software-licensor' ),
+            array( $this, 'render_woo_product_meta_box' ),
+            'product',
+            'side',
+            'default'
+        );
+    }
+
+    /**
+     * Render the WooCommerce product meta box for linked EDD downloads.
+     *
+     * @param \WP_Post $post Product post.
+     * @return void
+     */
+    public function render_woo_product_meta_box( $post ) {
+        wp_nonce_field( 'software_licensor_woo_product_meta', 'software_licensor_woo_product_meta_nonce' );
+
+        $linked_download_ids = get_post_meta( $post->ID, self::WOO_EDD_DOWNLOAD_IDS_META_KEY, true );
+
+        echo '<p>';
+        echo '<label for="software_licensor_edd_download_ids"><strong>' . esc_html__( 'Linked EDD Download IDs', 'software-licensor' ) . '</strong></label>';
+        echo '<input type="text" class="widefat" id="software_licensor_edd_download_ids" name="software_licensor_edd_download_ids" value="' . esc_attr( (string) $linked_download_ids ) . '" placeholder="123,456" />';
+        echo '</p>';
+        echo '<p class="description">' . esc_html__( 'Enter one or more Easy Digital Downloads IDs separated by commas. Customers who buy this WooCommerce product will see the current files from those linked downloads in the Downloads section of My Account.', 'software-licensor' ) . '</p>';
+
+        if ( ! $this->is_edd_active() || ! function_exists( 'edd_get_download' ) ) {
+            echo '<p class="description" style="color:#b32d2e;">' . esc_html__( 'Easy Digital Downloads is not active, so linked downloads cannot be previewed right now.', 'software-licensor' ) . '</p>';
+            return;
+        }
+
+        $download_ids = $this->parse_download_ids_string( $linked_download_ids );
+
+        if ( empty( $download_ids ) ) {
+            return;
+        }
+
+        echo '<ul style="margin:8px 0 0 18px; list-style:disc;">';
+
+        foreach ( $download_ids as $download_id ) {
+            $download = edd_get_download( $download_id );
+
+            if ( $download ) {
+                echo '<li>' . esc_html( get_the_title( $download_id ) ) . ' (#' . esc_html( (string) $download_id ) . ')</li>';
+            } else {
+                echo '<li style="color:#b32d2e;">' . sprintf( esc_html__( 'Download #%d was not found.', 'software-licensor' ), (int) $download_id ) . '</li>';
+            }
+        }
+
+        echo '</ul>';
+    }
+
+    /**
+     * Save linked EDD download IDs for a WooCommerce product.
+     *
+     * @param int      $post_id Product post ID.
+     * @param \WP_Post $post Product post.
+     * @return void
+     */
+    public function save_woo_product_meta_box( $post_id, $post ) {
+        if ( ! isset( $_POST['software_licensor_woo_product_meta_nonce'] ) ) {
+            return;
+        }
+
+        if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['software_licensor_woo_product_meta_nonce'] ) ), 'software_licensor_woo_product_meta' ) ) {
+            return;
+        }
+
+        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+            return;
+        }
+
+        if ( ! $post instanceof \WP_Post || 'product' !== $post->post_type ) {
+            return;
+        }
+
+        if ( ! current_user_can( 'edit_post', $post_id ) ) {
+            return;
+        }
+
+        $raw_ids      = isset( $_POST['software_licensor_edd_download_ids'] ) ? sanitize_text_field( wp_unslash( $_POST['software_licensor_edd_download_ids'] ) ) : '';
+        $download_ids = $this->parse_download_ids_string( $raw_ids );
+
+        if ( empty( $download_ids ) ) {
+            delete_post_meta( $post_id, self::WOO_EDD_DOWNLOAD_IDS_META_KEY );
+            return;
+        }
+
+        update_post_meta( $post_id, self::WOO_EDD_DOWNLOAD_IDS_META_KEY, implode( ',', $download_ids ) );
+    }
+
+    /**
+     * Trigger a bridge hook after WooCommerce marks a payment complete.
+     *
+     * @param int $order_id WooCommerce order ID.
+     * @return void
+     */
+    public function handle_woocommerce_payment_complete( $order_id ) {
+        $order = wc_get_order( $order_id );
+
+        if ( ! $order ) {
+            return;
+        }
+
+        do_action( 'software_licensor_woo_linked_edd_downloads_granted', $order_id, $this->get_order_linked_edd_download_ids( $order ), $order );
+    }
+
+    /**
+     * Append EDD-linked files to the WooCommerce My Account downloads list.
+     *
+     * @param array<int, array<string, mixed>> $downloads Existing Woo downloads.
+     * @return array<int, array<string, mixed>>
+     */
+    public function append_linked_edd_downloads_to_account_downloads( $downloads ) {
+        if ( ! is_user_logged_in() || ! $this->is_edd_active() || ! function_exists( 'edd_get_download_files' ) ) {
+            return $downloads;
+        }
+
+        $linked_downloads = $this->get_customer_linked_edd_downloads( get_current_user_id() );
+
+        if ( empty( $linked_downloads ) ) {
+            return $downloads;
+        }
+
+        $existing_keys = array();
+
+        foreach ( $downloads as $download ) {
+            if ( isset( $download['download_id'], $download['file']['id'] ) ) {
+                $existing_keys[] = (string) $download['download_id'] . ':' . (string) $download['file']['id'];
+            }
+        }
+
+        foreach ( $linked_downloads as $download_id => $context ) {
+            $files = edd_get_download_files( $download_id );
+
+            if ( ! is_array( $files ) || empty( $files ) ) {
+                continue;
+            }
+
+            foreach ( $files as $file_id => $file_data ) {
+                $file_name = '';
+                $file_url  = '';
+
+                if ( is_array( $file_data ) ) {
+                    $file_name = isset( $file_data['name'] ) ? (string) $file_data['name'] : '';
+                    $file_url  = isset( $file_data['file'] ) ? (string) $file_data['file'] : '';
+                } elseif ( is_string( $file_data ) ) {
+                    $file_url = $file_data;
+                }
+
+                if ( '' === $file_url ) {
+                    continue;
+                }
+
+                $unique_key = (string) $download_id . ':' . (string) $file_id;
+
+                if ( in_array( $unique_key, $existing_keys, true ) ) {
+                    continue;
+                }
+
+                $downloads[] = array(
+                    'download_url'        => $file_url,
+                    'download_id'         => $download_id,
+                    'product_id'          => $context['product_id'],
+                    'product_name'        => get_the_title( $context['product_id'] ),
+                    'download_name'       => '' !== $file_name ? $file_name : get_the_title( $download_id ),
+                    'downloads_remaining' => '',
+                    'access_expires'      => '',
+                    'file'                => array(
+                        'id'   => (string) $file_id,
+                        'name' => '' !== $file_name ? $file_name : basename( (string) wp_parse_url( $file_url, PHP_URL_PATH ) ),
+                    ),
+                );
+
+                $existing_keys[] = $unique_key;
+            }
+        }
+
+        return $downloads;
+    }
+
+    /**
+     * Determine whether Easy Digital Downloads is active.
+     *
+     * @return bool
+     */
+    private function is_edd_active() {
+        return class_exists( 'Easy_Digital_Downloads' ) || function_exists( 'edd_get_download_files' );
+    }
+
+    /**
+     * Parse a comma-separated list of EDD download IDs.
+     *
+     * @param string $raw_ids Raw text.
+     * @return array<int>
+     */
+    private function parse_download_ids_string( $raw_ids ) {
+        if ( ! is_string( $raw_ids ) || '' === trim( $raw_ids ) ) {
+            return array();
+        }
+
+        $download_ids = preg_split( '/\s*,\s*/', trim( $raw_ids ) );
+
+        if ( ! is_array( $download_ids ) ) {
+            return array();
+        }
+
+        $download_ids = array_filter( array_map( 'absint', $download_ids ) );
+
+        return array_values( array_unique( $download_ids ) );
+    }
+
+    /**
+     * Return linked EDD download IDs for a WooCommerce product.
+     *
+     * @param int $product_id Product ID.
+     * @return array<int>
+     */
+    private function get_linked_edd_download_ids_for_product( $product_id ) {
+        return $this->parse_download_ids_string( (string) get_post_meta( $product_id, self::WOO_EDD_DOWNLOAD_IDS_META_KEY, true ) );
+    }
+
+    /**
+     * Return linked EDD download IDs for a WooCommerce order.
+     *
+     * @param \WC_Order $order Order object.
+     * @return array<int>
+     */
+    private function get_order_linked_edd_download_ids( $order ) {
+        $linked_download_ids = array();
+
+        foreach ( $order->get_items() as $item ) {
+            $product_id = $item->get_product_id();
+
+            if ( ! $product_id ) {
+                continue;
+            }
+
+            $linked_download_ids = array_merge( $linked_download_ids, $this->get_linked_edd_download_ids_for_product( $product_id ) );
+        }
+
+        return array_values( array_unique( array_map( 'absint', $linked_download_ids ) ) );
+    }
+
+    /**
+     * Return current EDD downloads linked to completed or processing Woo orders.
+     *
+     * @param int $customer_id Customer user ID.
+     * @return array<int, array<string, int>>
+     */
+    private function get_customer_linked_edd_downloads( $customer_id ) {
+        $results = array();
+        $orders  = wc_get_orders(
+            array(
+                'customer_id' => $customer_id,
+                'status'      => array( 'wc-processing', 'wc-completed' ),
+                'limit'       => -1,
+                'return'      => 'objects',
+            )
+        );
+
+        foreach ( $orders as $order ) {
+            foreach ( $order->get_items() as $item ) {
+                $product_id = $item->get_product_id();
+
+                if ( ! $product_id ) {
+                    continue;
+                }
+
+                foreach ( $this->get_linked_edd_download_ids_for_product( $product_id ) as $download_id ) {
+                    if ( ! isset( $results[ $download_id ] ) ) {
+                        $results[ $download_id ] = array(
+                            'product_id' => $product_id,
+                            'order_id'   => $order->get_id(),
+                        );
+                    }
+                }
+            }
+        }
+
+        return $results;
     }
 
     /**
