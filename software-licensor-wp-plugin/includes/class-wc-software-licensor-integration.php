@@ -66,6 +66,7 @@ class WC_Software_Licensor_Integration {
         add_action( 'init', array( $this, 'my_licenses_account_endpoint' ) );
         add_filter( 'woocommerce_account_menu_items', array( $this, 'my_licenses_account_menu_items' ) );
         add_action( 'woocommerce_account_user-licenses_endpoint', array( $this, 'account_page_display_license' ) );
+        add_filter( 'woocommerce_checkout_fields', 'software_licensor_relax_checkout_fields_for_free_orders', 999 );
     }
 
     /**
@@ -967,6 +968,33 @@ document.addEventListener('DOMContentLoaded', function () {
         </div>
         <?php
     }
+}
+
+function software_licensor_relax_checkout_fields_for_free_orders( $fields ) {
+    if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+        return $fields;
+    }
+
+    if ( (float) WC()->cart->get_total( 'edit' ) > 0 ) {
+        return $fields;
+    }
+
+    $fields_to_remove = array(
+        'billing_company',
+        'billing_phone',
+        'billing_address_1',
+        'billing_address_2',
+        'billing_city',
+        'billing_postcode',
+        'billing_state',
+        'billing_country',
+    );
+
+    foreach ( $fields_to_remove as $key ) {
+        unset( $fields['billing'][ $key ] );
+    }
+
+    return $fields;
 }
 
 endif;

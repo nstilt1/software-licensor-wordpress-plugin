@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function software_licensor_update_pubkeys(bool $save_ecdh_key) {
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, "https://software-licensor-public-keys.s3.amazonaws.com/public_keys");
+    curl_setopt($ch, CURLOPT_URL, "https://d2r86woob3edhv.cloudfront.net/public_keys");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 
