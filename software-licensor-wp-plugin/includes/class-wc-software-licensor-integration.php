@@ -831,9 +831,15 @@ document.addEventListener('DOMContentLoaded', function () {
         $private_key = software_licensor_load_private_key();
 
         $exported_key = '';
-        if ( ! openssl_pkey_export( $private_key, $exported_key, $password ) ) {
+        $options = [
+            'encrypt_key' => true,
+            'encrypt_key_cipher' => OPENSSL_CIPHER_AES_256_CBC,
+            'private_key_type' => OPENSSL_KEYTYPE_EC,
+        ];
+
+        if (!openssl_pkey_export($private_key, $exported_key, $password, $options)) {
             ob_end_clean();
-            wp_die( 'Failed to export the private key.' );
+            wp_die('Failed to export the private key.');
         }
 
         $result = array(

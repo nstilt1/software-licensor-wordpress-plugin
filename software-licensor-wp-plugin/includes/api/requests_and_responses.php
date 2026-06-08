@@ -20,6 +20,7 @@ function software_licensor_update_pubkeys(bool $save_ecdh_key) {
     curl_setopt($ch, CURLOPT_URL, "https://d2r86woob3edhv.cloudfront.net/public_keys");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
 
     $protobuf_data = curl_exec($ch);
     if ( curl_errno( $ch ) ) {
